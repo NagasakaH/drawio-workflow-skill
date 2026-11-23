@@ -1,0 +1,140 @@
+<mxfile host="drawio-workflow-skill" version="1.1.0">
+  <diagram id="workflow-1" name="EC注文確定〜決済・ストレージ更新・非同期通知ワークフロー">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title_banner" value="&lt;b style=&quot;font-size:17px&quot;&gt;EC注文確定〜決済・ストレージ更新・非同期通知ワークフロー&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot;&gt;ユーザー操作 → 画面 → バックエンド → ストレージ (RDS / DynamoDB / S3 / SQS) の連動とデータ状態変化&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;arcSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="25" width="1235" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="phase_0" value="&lt;b&gt;Phase 1: 注文操作・入力検証&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f0fe;strokeColor=#6c8ebf;fontSize=12;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="246" y="91" width="238" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="phase_1" value="&lt;b&gt;Phase 2: API受付・在庫/決済判定&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="496" y="91" width="238" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="phase_2" value="&lt;b&gt;Phase 3: DB永続化・S3証憑保存&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="746" y="91" width="238" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="phase_3" value="&lt;b&gt;Phase 4: 非同期イベント・完了表示&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="996" y="91" width="238" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_user" value="" style="swimlane;horizontal=0;startSize=165;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f8fbff;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="139" width="1235" height="169" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_user_hdr" value="&lt;b style=&quot;font-size:13px&quot;&gt;ユーザー操作&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot; style=&quot;font-size:11px&quot;&gt;Actor / Action&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;connectable=0;" vertex="1" parent="lane_user">
+          <mxGeometry x="6" y="0" width="153" height="169" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_screen" value="" style="swimlane;horizontal=0;startSize=165;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#f9fdf9;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="308" width="1235" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_screen_hdr" value="&lt;b style=&quot;font-size:13px&quot;&gt;画面 / UI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot; style=&quot;font-size:11px&quot;&gt;Web / Mobile App&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;connectable=0;" vertex="1" parent="lane_screen">
+          <mxGeometry x="6" y="0" width="153" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_backend" value="" style="swimlane;horizontal=0;startSize=165;fillColor=#ffe6cc;strokeColor=#d79b00;swimlaneFillColor=#fffdf9;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="458" width="1235" height="284" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_backend_hdr" value="&lt;b style=&quot;font-size:13px&quot;&gt;バックエンド&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot; style=&quot;font-size:11px&quot;&gt;API / Lambda / Worker&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;connectable=0;" vertex="1" parent="lane_backend">
+          <mxGeometry x="6" y="0" width="153" height="284" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_storage" value="" style="swimlane;horizontal=0;startSize=165;fillColor=#e1d5e7;strokeColor=#9673a6;swimlaneFillColor=#fcfaff;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="742" width="1235" height="470" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_storage_hdr" value="&lt;b style=&quot;font-size:13px&quot;&gt;ストレージ / リソース&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#555555&quot; style=&quot;font-size:11px&quot;&gt;RDS / DynamoDB / S3 / SQS&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;connectable=0;" vertex="1" parent="lane_storage">
+          <mxGeometry x="6" y="0" width="153" height="470" as="geometry" />
+        </mxCell>
+        <mxCell id="u_click" value="&lt;b&gt;[1] 購入者&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;「注文を確定する」押下&lt;/font&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_user">
+          <mxGeometry x="300" y="26" width="50" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="u_confirm" value="&lt;b&gt;[9] 注文完了・領収書確認&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;完了画面 &amp;amp; PDF領収書DL&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;" vertex="1" parent="lane_user">
+          <mxGeometry x="990" y="53" width="170" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="s_checkout" value="&lt;b&gt;[2] 注文確認画面&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;二重送信防止ロック &amp;amp; 入力検証&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#d5e8d4;strokeColor=#82b366;shadow=1;" vertex="1" parent="lane_screen">
+          <mxGeometry x="235" y="40" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s_complete" value="&lt;b&gt;[8] 注文完了画面&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;注文番号表示・S3署名付きURL取得&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#d5e8d4;strokeColor=#82b366;shadow=1;" vertex="1" parent="lane_screen">
+          <mxGeometry x="985" y="40" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="b_apigw" value="&lt;b&gt;[3] API Gateway&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;POST /api/v1/orders&lt;/font&gt;" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#E7157B;strokeColor=#ffffff;" vertex="1" parent="lane_backend">
+          <mxGeometry x="545" y="24" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="b_validate" value="&lt;b&gt;[4] セッション &amp;amp; 在庫検証&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;カート有効性・引当チェック&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;shadow=1;" vertex="1" parent="lane_backend">
+          <mxGeometry x="493" y="174" width="165" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="b_order_lambda" value="&lt;b&gt;[5] OrderService (Lambda)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;決済実行・DB記録・PDF生成&lt;/font&gt;" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=#ffffff;" vertex="1" parent="lane_backend">
+          <mxGeometry x="795" y="91" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="b_notify_worker" value="&lt;b&gt;[7] NotifyWorker (EKS)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;完了メール送信・ポイント付与&lt;/font&gt;" style="html=1;dashed=0;fillColor=#2875E2;strokeColor=#ffffff;shape=mxgraph.kubernetes.icon2;prIcon=pod;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="lane_backend">
+          <mxGeometry x="1046" y="92" width="58" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="st_dynamo" value="&lt;b&gt;DynamoDB (CartSessions)&lt;/b&gt;" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#C925D1;strokeColor=#ffffff;" vertex="1" parent="lane_storage">
+          <mxGeometry x="545" y="24" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="st_rds" value="&lt;b&gt;Aurora PostgreSQL&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;orders / inventory&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=11;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;" vertex="1" parent="lane_storage">
+          <mxGeometry x="753" y="24" width="145" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="st_s3" value="&lt;b&gt;Amazon S3 (Receipts)&lt;/b&gt;" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#277116;strokeColor=#ffffff;" vertex="1" parent="lane_storage">
+          <mxGeometry x="795" y="252" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="st_sqs" value="&lt;b&gt;Amazon SQS (OrderEvents)&lt;/b&gt;" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fillColor=#D9A741;strokeColor=#ffffff;" vertex="1" parent="lane_storage">
+          <mxGeometry x="1045" y="24" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="st_dynamo_effect" value="&lt;b&gt;DynamoDB 状態変化&lt;/b&gt;&lt;br&gt;• GetItem: cart_id でカート取得&lt;br&gt;• UpdateItem: state = LOCKED&lt;br&gt;• 決済後に TTL 更新 (COMPLETED)" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=12;fillColor=#ffffc0;strokeColor=#b59b00;fontSize=11;align=left;spacingLeft=6;shadow=1;" vertex="1" parent="lane_storage">
+          <mxGeometry x="475" y="136" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="st_rds_effect" value="&lt;b&gt;RDS トランザクション&lt;/b&gt;&lt;br&gt;• INSERT orders (status='PAID')&lt;br&gt;• INSERT order_items (明細行)&lt;br&gt;• UPDATE inventory SET stock = stock - 1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=12;fillColor=#ffffc0;strokeColor=#b59b00;fontSize=11;align=left;spacingLeft=6;shadow=1;" vertex="1" parent="lane_storage">
+          <mxGeometry x="725" y="116" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="st_s3_effect" value="&lt;b&gt;S3 オブジェクト生成&lt;/b&gt;&lt;br&gt;• PutObject: receipts/{order_id}.pdf&lt;br&gt;• SSE-S3 暗号化 &amp;amp; メタデータ付与" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=12;fillColor=#ffffc0;strokeColor=#b59b00;fontSize=11;align=left;spacingLeft=6;shadow=1;" vertex="1" parent="lane_storage">
+          <mxGeometry x="725" y="364" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="st_sqs_effect" value="&lt;b&gt;SQS キュー動作&lt;/b&gt;&lt;br&gt;• SendMessage: OrderConfirmedEvent&lt;br&gt;• Receive/Delete: NotifyWorkerが消費" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=12;fillColor=#ffffc0;strokeColor=#b59b00;fontSize=11;align=left;spacingLeft=6;shadow=1;" vertex="1" parent="lane_storage">
+          <mxGeometry x="975" y="136" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_1" value="① 押下" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="u_click" target="s_checkout">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_2" value="② HTTPS POST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="s_checkout" target="b_apigw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_3" value="③ 認証OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_apigw" target="b_validate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_4" value="④ Get/Lock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;endFill=0;strokeWidth=1.8;strokeColor=#0066CC;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_validate" target="st_dynamo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_5" value="⑤ 検証OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_validate" target="b_order_lambda">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_6" value="⑥ TX COMMIT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_order_lambda" target="st_rds">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_7" value="⑦ PutObject" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="755" y="594" />
+              <mxPoint x="755" y="1024" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_8" value="⑧ Enqueue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_sqs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="975" y="579" />
+              <mxPoint x="975" y="796" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_9" value="⑨ Poll" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=0.5;exitY=0;entryX=0.5;entryY=1;entryDx=0;entryDy=38;entryPerimeter=0;" edge="1" parent="1" source="st_sqs" target="b_notify_worker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_10" value="⑩ 200 OK (order_id)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;strokeWidth=1.5;strokeColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="s_complete">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_11" value="⑪ 画面表示" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="s_complete" target="u_confirm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

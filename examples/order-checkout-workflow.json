@@ -1,0 +1,261 @@
+{
+  "title": "EC注文確定〜決済・ストレージ更新・非同期通知ワークフロー",
+  "subtitle": "ユーザー操作 → 画面 → バックエンド → ストレージ (RDS / DynamoDB / S3 / SQS) の連動とデータ状態変化",
+  "colPitch": 250,
+  "phases": [
+    {
+      "col": 0,
+      "label": "Phase 1: 注文操作・入力検証",
+      "fillColor": "#e8f0fe",
+      "strokeColor": "#6c8ebf"
+    },
+    {
+      "col": 1,
+      "label": "Phase 2: API受付・在庫/決済判定",
+      "fillColor": "#fff2cc",
+      "strokeColor": "#d6b656"
+    },
+    {
+      "col": 2,
+      "label": "Phase 3: DB永続化・S3証憑保存",
+      "fillColor": "#d5e8d4",
+      "strokeColor": "#82b366"
+    },
+    {
+      "col": 3,
+      "label": "Phase 4: 非同期イベント・完了表示",
+      "fillColor": "#e1d5e7",
+      "strokeColor": "#9673a6"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "user",
+      "title": "ユーザー操作",
+      "subtitle": "Actor / Action",
+      "headerFill": "#dae8fc",
+      "strokeColor": "#6c8ebf",
+      "bodyFill": "#f8fbff"
+    },
+    {
+      "id": "screen",
+      "title": "画面 / UI",
+      "subtitle": "Web / Mobile App",
+      "headerFill": "#d5e8d4",
+      "strokeColor": "#82b366",
+      "bodyFill": "#f9fdf9"
+    },
+    {
+      "id": "backend",
+      "title": "バックエンド",
+      "subtitle": "API / Lambda / Worker",
+      "headerFill": "#ffe6cc",
+      "strokeColor": "#d79b00",
+      "bodyFill": "#fffdf9"
+    },
+    {
+      "id": "storage",
+      "title": "ストレージ / リソース",
+      "subtitle": "RDS / DynamoDB / S3 / SQS",
+      "headerFill": "#e1d5e7",
+      "strokeColor": "#9673a6",
+      "bodyFill": "#fcfaff"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "u_click",
+      "lane": "user",
+      "col": 0,
+      "kind": "actor",
+      "step": "1",
+      "label": "購入者",
+      "subtitle": "「注文を確定する」押下"
+    },
+    {
+      "id": "u_confirm",
+      "lane": "user",
+      "col": 3,
+      "kind": "action",
+      "step": "9",
+      "label": "注文完了・領収書確認",
+      "subtitle": "完了画面 & PDF領収書DL"
+    },
+
+    {
+      "id": "s_checkout",
+      "lane": "screen",
+      "col": 0,
+      "kind": "screen",
+      "step": "2",
+      "label": "注文確認画面",
+      "subtitle": "二重送信防止ロック & 入力検証"
+    },
+    {
+      "id": "s_complete",
+      "lane": "screen",
+      "col": 3,
+      "kind": "screen",
+      "step": "8",
+      "label": "注文完了画面",
+      "subtitle": "注文番号表示・S3署名付きURL取得"
+    },
+
+    {
+      "id": "b_apigw",
+      "lane": "backend",
+      "col": 1,
+      "kind": "apigw",
+      "step": "3",
+      "label": "API Gateway",
+      "subtitle": "POST /api/v1/orders"
+    },
+    {
+      "id": "b_validate",
+      "lane": "backend",
+      "col": 1,
+      "kind": "decision",
+      "step": "4",
+      "label": "セッション & 在庫検証",
+      "subtitle": "カート有効性・引当チェック"
+    },
+    {
+      "id": "b_order_lambda",
+      "lane": "backend",
+      "col": 2,
+      "kind": "lambda",
+      "step": "5",
+      "label": "OrderService (Lambda)",
+      "subtitle": "決済実行・DB記録・PDF生成"
+    },
+    {
+      "id": "b_notify_worker",
+      "lane": "backend",
+      "col": 3,
+      "kind": "k8s",
+      "step": "7",
+      "label": "NotifyWorker (EKS)",
+      "subtitle": "完了メール送信・ポイント付与"
+    },
+
+    {
+      "id": "st_dynamo",
+      "lane": "storage",
+      "col": 1,
+      "kind": "dynamodb",
+      "label": "DynamoDB (CartSessions)",
+      "effectTitle": "DynamoDB 状態変化",
+      "effect": [
+        "GetItem: cart_id でカート取得",
+        "UpdateItem: state = LOCKED",
+        "決済後に TTL 更新 (COMPLETED)"
+      ]
+    },
+    {
+      "id": "st_rds",
+      "lane": "storage",
+      "col": 2,
+      "kind": "rds",
+      "label": "Aurora PostgreSQL",
+      "subtitle": "orders / inventory",
+      "effectTitle": "RDS トランザクション",
+      "effect": [
+        "INSERT orders (status='PAID')",
+        "INSERT order_items (明細行)",
+        "UPDATE inventory SET stock = stock - 1"
+      ]
+    },
+    {
+      "id": "st_s3",
+      "lane": "storage",
+      "col": 2,
+      "kind": "s3",
+      "label": "Amazon S3 (Receipts)",
+      "effectTitle": "S3 オブジェクト生成",
+      "effect": [
+        "PutObject: receipts/{order_id}.pdf",
+        "SSE-S3 暗号化 & メタデータ付与"
+      ]
+    },
+    {
+      "id": "st_sqs",
+      "lane": "storage",
+      "col": 3,
+      "kind": "sqs",
+      "label": "Amazon SQS (OrderEvents)",
+      "effectTitle": "SQS キュー動作",
+      "effect": [
+        "SendMessage: OrderConfirmedEvent",
+        "Receive/Delete: NotifyWorkerが消費"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "u_click",
+      "to": "s_checkout",
+      "type": "flow",
+      "label": "① 押下"
+    },
+    {
+      "from": "s_checkout",
+      "to": "b_apigw",
+      "type": "flow",
+      "label": "② HTTPS POST"
+    },
+    {
+      "from": "b_apigw",
+      "to": "b_validate",
+      "type": "flow",
+      "label": "③ 認証OK"
+    },
+    {
+      "from": "b_validate",
+      "to": "st_dynamo",
+      "type": "read",
+      "label": "④ Get/Lock"
+    },
+    {
+      "from": "b_validate",
+      "to": "b_order_lambda",
+      "type": "flow",
+      "label": "⑤ 検証OK"
+    },
+    {
+      "from": "b_order_lambda",
+      "to": "st_rds",
+      "type": "write",
+      "label": "⑥ TX COMMIT"
+    },
+    {
+      "from": "b_order_lambda",
+      "to": "st_s3",
+      "type": "write",
+      "label": "⑦ PutObject"
+    },
+    {
+      "from": "b_order_lambda",
+      "to": "st_sqs",
+      "type": "async",
+      "label": "⑧ Enqueue"
+    },
+    {
+      "from": "st_sqs",
+      "to": "b_notify_worker",
+      "type": "async",
+      "label": "⑨ Poll"
+    },
+    {
+      "from": "b_order_lambda",
+      "to": "s_complete",
+      "type": "response",
+      "label": "⑩ 200 OK (order_id)"
+    },
+    {
+      "from": "s_complete",
+      "to": "u_confirm",
+      "type": "flow",
+      "label": "⑪ 画面表示"
+    }
+  ]
+}
