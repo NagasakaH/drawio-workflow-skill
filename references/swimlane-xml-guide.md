@@ -71,3 +71,42 @@ exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;
 ```
 entryX=0.5;entryY=1;entryDx=0;entryDy=38;entryPerimeter=0;
 ```
+
+---
+
+## 4. `horizontal` と `vertical` の命名と「90° 回転」の落とし穴
+
+`swimlane` の `horizontal` は**ヘッダーの向き**を表すフラグで、レーンの並び方向ではない。名前の罠に注意する。
+
+| スキルの `--direction` | `swimlane` のスタイル | ヘッダーの位置 | 見出しの出し方 |
+|---|---|---|---|
+| `horizontal`（横レーン行） | `horizontal=0` | 各レーンの左端 | **空の `value`** ＋ `text;html=1;` 子セル（下記 §1） |
+| `vertical`（縦レーン列） | `horizontal=1` | 各レーンの上端 | `value` に直接書いてよい（回転しない） |
+
+`horizontal=0` の `swimlane` に日本語の `value` を入れるとラベルが 90° 回転して描画され、日本語が縦読みに見えて非常に読みにくい。**回転するレーンに直接 `value` を置かない**のが鉄則で、`build-workflow.mjs` はこの方式で生成する。
+
+---
+
+## 5. エッジラベル（特に長い日本語ラベル）の安全な書き方
+
+エッジの `value` に直接ラベルを書くと、ラベルは折返し幅を持たず（描画実測で `width=0`／`height=0`）改行されない1本の長文になる。日本語の長いラベルは他のレーンや図形を横切り、線を消して見える。必ず幅を持つ子セルとして出す。
+
+```xml
+<!-- エッジ本体は value を空にする -->
+<mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;exitX=1;exitY=0.5;" edge="1" parent="1" source="n1" target="n2">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+
+<!-- ラベルは子セルとして、折返し幅 width と高さ height を持つ -->
+<mxCell id="e2_lbl" value="② 同一トランザクション内で注文本体と明細行を確定" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;fontSize=11;labelBackgroundColor=#ffffff;whiteSpace=wrap;" vertex="1" connectable="0" parent="e2">
+  <mxGeometry x="-0.1" y="0" relative="1" as="geometry" width="132" height="45">
+    <mxPoint x="-66" y="-50" as="offset" />
+  </mxGeometry>
+</mxCell>
+```
+
+- `width` / `height` は**折返し後の実測高さを収める**（この例では幅 132px で 3 行＝約 39px なので 45px）。高さが足りないと文字が箱の下へはみ出して線にかかる。
+- `mxGeometry` の `x`（-1〜1）が線上の基準点、`as="offset"` の `mxPoint` が**その点からラベル箱の左上までのずれ**である。中心を置きたい位置を `dx, dy` として表すなら `x座標 = dx - width/2`、`y座標 = dy - height/2` を書く（ここを間違えるとラベルが線の上に残る）。
+- `labelBackgroundColor=#ffffff` は文字幅 + 3px の白い箱を描く。衝突検査はこの白い箱の実際のサイズで行う。
+- `whiteSpace=wrap` を付け忘れると `width` を持っても折り返さない。
+- 実際に描画される枠は `node scripts/check-layout.mjs <図面>` で測れる（折返さないラベルは `mxText` の `bounds` より広く描かれるため、`bounds` をそのまま衝突判定に使ってはいけない）。

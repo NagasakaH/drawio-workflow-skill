@@ -5566,6 +5566,14 @@ export {
   writePngWithText,
   isPngBuffer,
   renderGraphModelToSvg,
+  getDrawioOssRuntime,
+  decodeGraphModel,
+  createHeadlessGraphAndView,
+  computeGraphBounds,
+  parseRichTextLines,
+  wrapRichTextLines,
+  computeLinesMetrics,
+  estimateTextWidth,
 };
 
 // ============================================================================

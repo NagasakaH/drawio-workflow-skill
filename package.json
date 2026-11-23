@@ -4,7 +4,9 @@
   "description": "Zero-dependency Node.js (.mjs) agent skill for generating horizontal/vertical swimlane workflow diagrams (.drawio + .drawio.png) visualizing UI, Backend, and Storage (RDS/S3/DynamoDB/SQS) behavior",
   "type": "module",
   "scripts": {
-    "demo": "node scripts/build-workflow.mjs --spec examples/order-checkout-workflow.json --direction horizontal --output examples/output/order-checkout-workflow.drawio.png && node scripts/build-workflow.mjs --spec examples/order-checkout-workflow.json --direction vertical --output examples/output/order-checkout-workflow-vertical.drawio.png"
+    "demo": "node scripts/build-workflow.mjs --spec examples/order-checkout-workflow.json --direction horizontal --output examples/output/order-checkout-workflow.drawio.png && node scripts/build-workflow.mjs --spec examples/order-checkout-workflow.json --direction vertical --output examples/output/order-checkout-workflow-vertical.drawio.png",
+    "check-layout": "node scripts/check-layout.mjs",
+    "test": "node scripts/selftest.mjs"
   },
   "repository": {
     "type": "git",

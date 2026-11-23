@@ -11,6 +11,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { convertXmlToPng, convertXmlToSvg } from "./drawio2png.mjs";
+import { inspectDiagram, measureDiagram } from "./check-layout.mjs";
 
 function escapeXml(str) {
   if (str == null) return "";
@@ -279,7 +280,7 @@ function entryBottomStyle(layout, xRatio = 0.5) {
 /**
  * Generates horizontal swimlanes (lanes stacked top-to-bottom, steps flowing left-to-right).
  */
-function generateHorizontalWorkflowXml(spec) {
+function generateHorizontalWorkflowXml(spec, placementState, out, measured) {
   const title = spec.title || "システム作業フロー & リソース動作図";
   const subtitle =
     spec.subtitle ||
@@ -403,6 +404,8 @@ function generateHorizontalWorkflowXml(spec) {
             value: n.__effectText,
             x: effX,
             y: effY,
+            absX: leftMargin + effX,
+            absY: lane.y + effY,
             width: effW,
             height: effH,
           });
@@ -418,6 +421,21 @@ function generateHorizontalWorkflowXml(spec) {
 
     currentY += lane.height;
   }
+
+  const labelObstacles = collectLabelObstacles(nodeLayoutMap, effectCells);
+  for (const lane of laneMap.values()) {
+    labelObstacles.push(laneBorderObstacle(leftMargin, lane.y - 1, laneWidth, 2));
+    labelObstacles.push(
+      laneBorderObstacle(leftMargin, lane.y + lane.height - 1, laneWidth, 2)
+    );
+  }
+  let labelBounds = {
+    x: leftMargin,
+    y: topMargin,
+    w: laneWidth,
+    h: currentY + 16 - topMargin,
+  };
+  if (measured) applyMeasuredLayout(labelObstacles, labelBounds, measured);
 
   const xmlLines = [];
   xmlLines.push(`<mxfile host="drawio-workflow-skill" version="1.1.0">`);
@@ -438,6 +456,7 @@ function generateHorizontalWorkflowXml(spec) {
     `          <mxGeometry x="${leftMargin}" y="${topMargin}" width="${laneWidth}" height="${titleBannerHeight}" as="geometry" />`
   );
   xmlLines.push(`        </mxCell>`);
+  labelObstacles.push({ x: leftMargin, y: topMargin, w: laneWidth, h: titleBannerHeight });
 
   // Phase Bar
   if (phases.length > 0) {
@@ -457,6 +476,7 @@ function generateHorizontalWorkflowXml(spec) {
       xmlLines.push(
         `          <mxGeometry x="${px}" y="${phaseY}" width="${pw}" height="${phaseBarHeight}" as="geometry" />`
       );
+      labelObstacles.push({ x: px, y: phaseY, w: pw, h: phaseBarHeight });
       xmlLines.push(`        </mxCell>`);
     }
   }
@@ -557,7 +577,37 @@ function generateHorizontalWorkflowXml(spec) {
       if (e.entryX != null) portStyle += `entryX=${e.entryX};entryY=${e.entryY ?? 0.5};`;
     }
 
-    emitEdgeXml(xmlLines, edgeId, e.label || "", style + portStyle, src.node.id, trg.node.id, autoWaypoints);
+    const labelInfo = resolveEdgeLabelLayout(
+      e,
+      src,
+      trg,
+      autoWaypoints,
+      labelObstacles,
+      labelBounds,
+      src.lane.width ? Math.round(src.lane.width - 24) : null,
+      placementState ? placementState.get(edgeId)?.tried : null,
+      measured ? measured.edgePathsById.get(edgeId) : null
+    );
+    if (out && labelInfo) {
+      out.placements.set(edgeId, { key: labelInfo.key, rect: labelInfo.rect });
+    }
+    emitEdgeXml(
+      xmlLines,
+      edgeId,
+      e.label || "",
+      style + portStyle,
+      src.node.id,
+      trg.node.id,
+      autoWaypoints,
+      labelInfo,
+      // 選んだ基準点（線の何割地点か）を実際にも書き出す。ここを既定値のままだと
+      // offset だけ候補用になり、ラベルが別地点へずれて線に乗る。
+      labelInfo
+        ? labelInfo.ratio
+        : e.labelRatio == null
+          ? null
+          : Number(e.labelRatio)
+    );
   }
 
   xmlLines.push(`      </root>`);
@@ -570,7 +620,7 @@ function generateHorizontalWorkflowXml(spec) {
 /**
  * Generates vertical swimlanes (lanes side-by-side left-to-right, steps flowing top-to-bottom).
  */
-function generateVerticalWorkflowXml(spec) {
+function generateVerticalWorkflowXml(spec, placementState, out, measured) {
   const title = spec.title || "システム作業フロー & リソース動作図";
   const subtitle =
     spec.subtitle ||
@@ -654,7 +704,8 @@ function generateVerticalWorkflowXml(spec) {
     let maxW = Number(lane.minWidth || 255);
     for (const stepNodes of lane.cellsByStep.values()) {
       for (const n of stepNodes) {
-        const needed = n.__totalBlockW + 64;
+        const blockW = n.__effectText ? Math.max(n.__totalBlockW, n.__effectW) : n.__totalBlockW;
+        const needed = blockW + 64;
         if (needed > maxW) maxW = needed;
       }
     }
@@ -701,6 +752,8 @@ function generateVerticalWorkflowXml(spec) {
             value: n.__effectText,
             x: effX,
             y: effY,
+            absX: lane.x + effX,
+            absY: laneTopY + effY,
             width: n.__effectW,
             height: n.__effectH,
           });
@@ -715,6 +768,21 @@ function generateVerticalWorkflowXml(spec) {
   }
 
   const totalDiagramWidth = currentX - leftMargin;
+
+  const labelObstacles = collectLabelObstacles(nodeLayoutMap, effectCells);
+  for (const lane of laneMap.values()) {
+    labelObstacles.push(laneBorderObstacle(lane.x - 1, laneTopY, 2, totalLaneHeight));
+    labelObstacles.push(
+      laneBorderObstacle(lane.x + lane.width - 1, laneTopY, 2, totalLaneHeight)
+    );
+  }
+  let labelBounds = {
+    x: leftMargin,
+    y: topMargin,
+    w: totalDiagramWidth,
+    h: laneTopY + totalLaneHeight + 16 - topMargin,
+  };
+  if (measured) applyMeasuredLayout(labelObstacles, labelBounds, measured);
 
   const xmlLines = [];
   xmlLines.push(`<mxfile host="drawio-workflow-skill" version="1.1.0">`);
@@ -735,6 +803,12 @@ function generateVerticalWorkflowXml(spec) {
     `          <mxGeometry x="${leftMargin}" y="${topMargin}" width="${totalDiagramWidth}" height="${titleBannerHeight}" as="geometry" />`
   );
   xmlLines.push(`        </mxCell>`);
+  labelObstacles.push({
+    x: leftMargin,
+    y: topMargin,
+    w: totalDiagramWidth,
+    h: titleBannerHeight,
+  });
 
   // Left Vertical Phase Bar aligned with step rows
   if (phases.length > 0) {
@@ -757,6 +831,7 @@ function generateVerticalWorkflowXml(spec) {
       xmlLines.push(
         `          <mxGeometry x="${leftMargin}" y="${py}" width="${phaseColWidth}" height="${ph}" as="geometry" />`
       );
+      labelObstacles.push({ x: leftMargin, y: py, w: phaseColWidth, h: ph });
       xmlLines.push(`        </mxCell>`);
     }
   }
@@ -844,7 +919,37 @@ function generateVerticalWorkflowXml(spec) {
       if (e.entryX != null) portStyle += `entryX=${e.entryX};entryY=${e.entryY ?? 0.5};`;
     }
 
-    emitEdgeXml(xmlLines, edgeId, e.label || "", style + portStyle, src.node.id, trg.node.id, autoWaypoints);
+    const labelInfo = resolveEdgeLabelLayout(
+      e,
+      src,
+      trg,
+      autoWaypoints,
+      labelObstacles,
+      labelBounds,
+      src.lane.width ? Math.round(src.lane.width - 24) : null,
+      placementState ? placementState.get(edgeId)?.tried : null,
+      measured ? measured.edgePathsById.get(edgeId) : null
+    );
+    if (out && labelInfo) {
+      out.placements.set(edgeId, { key: labelInfo.key, rect: labelInfo.rect });
+    }
+    emitEdgeXml(
+      xmlLines,
+      edgeId,
+      e.label || "",
+      style + portStyle,
+      src.node.id,
+      trg.node.id,
+      autoWaypoints,
+      labelInfo,
+      // 選んだ基準点（線の何割地点か）を実際にも書き出す。ここを既定値のままだと
+      // offset だけ候補用になり、ラベルが別地点へずれて線に乗る。
+      labelInfo
+        ? labelInfo.ratio
+        : e.labelRatio == null
+          ? null
+          : Number(e.labelRatio)
+    );
   }
 
   xmlLines.push(`      </root>`);
@@ -886,9 +991,196 @@ function emitNodesAndEffectsXml(xmlLines, nodeLayoutMap, effectCells) {
   }
 }
 
-function emitEdgeXml(xmlLines, edgeId, edgeLabel, fullStyle, sourceId, targetId, waypoints) {
+const EDGE_LABEL_FONT_SIZE = 11;
+const EDGE_LABEL_LINE_HEIGHT = 15;
+
+/**
+ * draw.io のエッジラベルは、幅が与えられるまで一切折り返さない。
+ * `whiteSpace=wrap` だけでも折り返さないため、折り返し幅と高さをここで計算して
+ * `edgeLabel` 子セルとして明示的に持たせる。
+ */
+function splitLabelSegments(label) {
+  if (!label) return [];
+  return String(label)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .split("\n");
+}
+
+function measureLabelWidth(text, fontSize = EDGE_LABEL_FONT_SIZE) {
+  let w = 0;
+  for (const ch of String(text)) {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x1100 && (cp <= 0x11ff || (cp >= 0x2e80 && cp <= 0xa4cf) ||
+        (cp >= 0xac00 && cp <= 0xd7a3) || (cp >= 0xf900 && cp <= 0xfaff) ||
+        (cp >= 0xfe30 && cp <= 0xfe4f) || (cp >= 0xff00 && cp <= 0xff60) ||
+        (cp >= 0xffe0 && cp <= 0xffe6))) {
+      w += fontSize; // 全角（ひらがな・カタカナ・漢字・全角記号・丸数字など）
+    } else if (/[A-Z0-9]/.test(ch)) {
+      w += fontSize * 0.66;
+    } else {
+      w += fontSize * 0.55;
+    }
+  }
+  return w;
+}
+
+function wrapLabelLines(segments, width, fontSize = EDGE_LABEL_FONT_SIZE) {
+  const lines = [];
+  for (const seg of segments) {
+    if (!seg) {
+      lines.push("");
+      continue;
+    }
+    let cur = "";
+    for (const ch of seg) {
+      if (cur && measureLabelWidth(cur + ch, fontSize) > width) {
+        lines.push(cur);
+        cur = ch;
+      } else {
+        cur += ch;
+      }
+    }
+    lines.push(cur);
+  }
+  return lines;
+}
+
+/**
+ * ラベルを収める幅の候補を広い順に返す。
+ * 広いほど見やすいが衝突しやすいため、広い候補から試して空いている場所を優先する。
+ */
+function edgeLabelWidthTiers(segments, dominant, widthLimit, edge) {
+  const natural = Math.max(...segments.map((seg) => measureLabelWidth(seg)));
+  if (edge && edge.labelWidth) return [Math.round(Number(edge.labelWidth))];
+
+  const hardCap = dominant === "v" ? 170 : 210;
+  let cap = Math.min(hardCap, Math.max(48, Math.round(natural)));
+  if (widthLimit) cap = Math.max(90, Math.min(cap, widthLimit));
+
+  const tiers = [cap];
+  for (const narrow of dominant === "v" ? [140, 112, 84] : [168, 132, 100]) {
+    const w = widthLimit ? Math.max(76, Math.min(narrow, widthLimit)) : narrow;
+    if (w < cap - 8) tiers.push(w);
+  }
+  return tiers;
+}
+
+/** 指定幅で折り返した結果（箱の幅と高さ）を返す。折返し不要なら幅は文字数のぶんだけ。 */
+function buildEdgeLabelBox(segments, width) {
+  const fits = segments.every((seg) => measureLabelWidth(seg) <= width);
+  const lines = fits ? segments : wrapLabelLines(segments, width);
+  const natural = Math.max(...lines.map((seg) => measureLabelWidth(seg)));
+  return {
+    width: Math.round(fits ? Math.max(40, natural) : width),
+    height: lines.length * EDGE_LABEL_LINE_HEIGHT + 6,
+    lineCount: lines.length,
+  };
+}
+
+/** 衝突回避に試す配置候補（線のどこに・どちら側へ・どれくらい離して置くか）。 */
+function edgeLabelCandidates(dominant) {
+  const sides = dominant === "h" ? ["above", "below"] : ["right", "left"];
+  const out = [];
+  for (const ratio of [-0.1, -0.34, 0.34, -0.58, 0.58, -0.8, 0.8]) {
+    for (const side of sides) {
+      for (const gap of [6, 18, 30, 44]) out.push({ ratio, side, gap });
+    }
+  }
+  out.push({ ratio: -0.1, side: "center", gap: 0 });
+  return out;
+}
+
+/** 折れ線の分位点（source 側が 0、target 側が 1）上の点を返す。 */
+function polylinePoint(points, fraction) {
+  if (points.length === 0) return { x: 0, y: 0 };
+  if (points.length === 1) return points[0];
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const d = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    segs.push(d);
+    total += d;
+  }
+  let rest = total * Math.min(1, Math.max(0, fraction));
+  for (let i = 0; i < segs.length; i++) {
+    if (rest <= segs[i]) {
+      const r = segs[i] === 0 ? 0 : rest / segs[i];
+      return {
+        x: points[i].x + (points[i + 1].x - points[i].x) * r,
+        y: points[i].y + (points[i + 1].y - points[i].y) * r,
+      };
+    }
+    rest -= segs[i];
+  }
+  return points[points.length - 1];
+}
+
+/**
+ * 1 pass 目で実測した図面ジオメトリを、ラベル配置の制約として採用する。
+ * 予測ジオメトリでの衝突判定は取り消し、実測のノード・レーン枠・折れ線を優先する。
+ */
+function applyMeasuredLayout(labelObstacles, labelBounds, measured) {
+  labelObstacles.length = 0;
+  labelObstacles.push(...measuredLabelObstacles(measured));
+  if (measured.bounds) {
+    labelBounds.x = measured.bounds.x - 8;
+    labelBounds.y = measured.bounds.y - 8;
+    labelBounds.w = measured.bounds.w + 16;
+    labelBounds.h = measured.bounds.h + 16;
+  }
+}
+
+function inflateRect(rect, m) {
+  return { x: rect.x - m, y: rect.y - m, w: rect.w + m * 2, h: rect.h + m * 2 };
+}
+
+function rectOverlapArea(a, b) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+/** ラベル箱の衝突スコア。ノードやノートとの重なりと、図枠外へのはみ出しを penalty にする。 */
+function scoreLabelRect(rect, obstacles, bounds) {
+  let score = 0;
+  for (const o of obstacles) {
+    const area = rectOverlapArea(rect, o);
+    if (area > 0) score += area * (o.hard ? 50000 : o.weight || 10);
+  }
+  if (bounds) {
+    // 図枠外へはみ出すと描画が切り込まれるため、何があっても避ける。
+    const outW =
+      Math.max(0, bounds.x - rect.x) +
+      Math.max(0, rect.x + rect.w - (bounds.x + bounds.w));
+    const outH =
+      Math.max(0, bounds.y - rect.y) +
+      Math.max(0, rect.y + rect.h - (bounds.y + bounds.h));
+    score += (outW * rect.h + outH * rect.w) * 50000;
+  }
+  return score;
+}
+
+function labelOffsetFor(side, box, gap = 6) {
+  if (side === "above") return { dx: 0, dy: -Math.round(box.height / 2 + gap) };
+  if (side === "below") return { dx: 0, dy: Math.round(box.height / 2 + gap) };
+  if (side === "left") return { dx: -Math.round(box.width / 2 + gap + 4), dy: 0 };
+  if (side === "right") return { dx: Math.round(box.width / 2 + gap + 4), dy: 0 };
+  return { dx: 0, dy: 0 };
+}
+
+function emitEdgeXml(xmlLines, edgeId, edgeLabel, fullStyle, sourceId, targetId, waypoints, labelLayout, labelPositionRatio) {
+  const useChildLabel = Boolean(edgeLabel) && Boolean(labelLayout);
+  const edgeStyle = useChildLabel ? fullStyle : `${fullStyle}labelBackgroundColor=#ffffff;`;
+
   xmlLines.push(
-    `        <mxCell id="${escapeXml(edgeId)}" value="${escapeXml(edgeLabel)}" style="${escapeXml(fullStyle)}" edge="1" parent="1" source="${escapeXml(sourceId)}" target="${escapeXml(targetId)}">`
+    `        <mxCell id="${escapeXml(edgeId)}" value="${useChildLabel ? "" : escapeXml(edgeLabel)}" style="${escapeXml(edgeStyle)}" edge="1" parent="1" source="${escapeXml(sourceId)}" target="${escapeXml(targetId)}">`
   );
   if (waypoints.length > 0) {
     xmlLines.push(`          <mxGeometry relative="1" as="geometry">`);
@@ -902,17 +1194,216 @@ function emitEdgeXml(xmlLines, edgeId, edgeLabel, fullStyle, sourceId, targetId,
     xmlLines.push(`          <mxGeometry relative="1" as="geometry" />`);
   }
   xmlLines.push(`        </mxCell>`);
+
+  if (!useChildLabel) return;
+
+  const xRatio = labelPositionRatio == null ? -0.1 : labelPositionRatio;
+  xmlLines.push(
+    `        <mxCell id="${escapeXml(`${edgeId}_lbl`)}" value="${escapeXml(edgeLabel)}" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=${EDGE_LABEL_FONT_SIZE};" vertex="1" connectable="0" parent="${escapeXml(edgeId)}">`
+  );
+  xmlLines.push(
+    `          <mxGeometry x="${xRatio}" y="0" relative="1" as="geometry" width="${labelLayout.width}" height="${labelLayout.height}"><mxPoint x="${labelLayout.dx}" y="${labelLayout.dy}" as="offset" /></mxGeometry>`
+  );
+  xmlLines.push(`        </mxCell>`);
+}
+
+/**
+ * エッジラベルの折り返し幅と、線・ノード・ノートと重ならない置き場所を決める。
+ * 採用した箱は obstacles に積み増すので、後から置くラベル同士も重なりにくい。
+ */
+function resolveEdgeLabelLayout(
+  edge,
+  src,
+  trg,
+  waypoints,
+  obstacles,
+  bounds,
+  widthLimit,
+  triedKeys,
+  measuredPath
+) {
+  if (!edge || !edge.label) return null;
+  const segments = splitLabelSegments(edge.label);
+  if (segments.length === 0) return null;
+
+  const dx = trg.centerX - src.centerX;
+  const dy = trg.centerY - src.centerY;
+  const dominant = Math.abs(dx) >= Math.abs(dy) ? "h" : "v";
+  const path =
+    measuredPath && measuredPath.length > 1
+      ? measuredPath
+      : [
+          { x: src.centerX, y: src.centerY },
+          ...(waypoints || []),
+          { x: trg.centerX, y: trg.centerY },
+        ];
+
+  // 実測時は全エッジの折れ線がすでに障害物へ入っているため、自分の線を二重に足さない。
+  for (let i = 1; measuredPath == null && i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    obstacles.push({
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.max(3, Math.abs(b.x - a.x)),
+      h: Math.max(3, Math.abs(b.y - a.y)),
+      weight: 4,
+    });
+  }
+
+  // "auto" は位置指定なしと同じ。未指定扱いにしないと中心基準の既定オフセットに落ちる。
+  const declaredSide = edge.labelPosition ? String(edge.labelPosition).trim().toLowerCase() : "";
+  const forcedSide = declaredSide && declaredSide !== "auto" ? declaredSide : null;
+  const forcedRatio = edge.labelRatio == null ? null : Number(edge.labelRatio);
+  let candidates = forcedSide
+    ? [{ ratio: forcedRatio == null ? -0.1 : forcedRatio, side: forcedSide, gap: 6 }]
+    : edgeLabelCandidates(dominant);
+  if (forcedRatio != null && !forcedSide) {
+    candidates = candidates.map((c) => ({ ...c, ratio: forcedRatio }));
+  }
+
+  const tried = triedKeys || new Set();
+  const scan = [];
+  let best = null;
+  let tierIndex = -1;
+  let candIndex = -1;
+  const tiers = edgeLabelWidthTiers(segments, dominant, widthLimit, edge);
+  for (const tier of tiers) {
+    tierIndex++;
+    candIndex = -1;
+    const box = buildEdgeLabelBox(segments, tier);
+    for (const cand of candidates) {
+      candIndex++;
+      const key = `${tierIndex}:${candIndex}`;
+      const anchor = polylinePoint(path, (1 + cand.ratio) / 2);
+      const off = labelOffsetFor(cand.side, box, cand.gap);
+      // 書き出す offset と同じ式で予測矩形を出す（実測では 1〜2px しか狂わない）。
+      const rect = {
+        x: Math.round(anchor.x + off.dx - box.width / 2),
+        y: Math.round(anchor.y + off.dy - box.height / 2),
+        w: box.width,
+        h: box.height,
+      };
+      let score = scoreLabelRect(rect, obstacles, bounds);
+      if (cand.side === "center") score += 120000; // 線を消すので最終手段
+      // 同等なら「線の中央寄り・線に近い置き場所」を選ぶ（重なり penalty より十分小さい）
+      score += Math.abs(cand.ratio) * 20 + (cand.gap - 6) * 2;
+      const cost = tried.has(key) ? score + 1e12 : score;
+      scan.push({ key, ratio: cand.ratio, side: cand.side, gap: cand.gap, w: box.width, h: box.height, score, rect });
+      if (!best || cost < best.cost - 1) {
+        best = {
+          width: box.width,
+          height: box.height,
+          // draw.io は「線上の基準点 + offset」をラベル箱の左上に置くため、
+          // 中心基準の off を左上基準へ読み替えてから書き出す。
+          dx: off.dx - Math.round(box.width / 2),
+          dy: off.dy - Math.round(box.height / 2),
+          ratio: cand.ratio,
+          score,
+          cost,
+          key,
+          rect,
+        };
+      }
+      if (score === 0 && !tried.has(key)) {
+        obstacles.push(rect);
+        return best;
+      }
+    }
+  }
+
+  if (process.env.DWL_DEBUG_LABELS && edge) {
+    const ranked = scan.slice().sort((a, b) => a.score - b.score).slice(0, 4);
+    console.error(
+      `[label ${edge.id}] path=${JSON.stringify(path.map((p) => `${p.x},${p.y}`)).slice(0, 90)} ` +
+        `best=${best && best.key} bestScore=${best && best.score} zero=${scan.filter((c) => c.score === 0).length} ` +
+        `top=${ranked.map((r) => `${r.key}:${r.score}(${r.rect.x},${r.rect.y},${r.w}x${r.h})`).join(" ")}`
+    );
+  }
+  if (best) obstacles.push(best.rect);
+  return best;
+}
+
+/** ノード・状態変化ノート・見出しバーなど、ラベルを置いてはいけない長方形を集める。 */
+function collectLabelObstacles(nodeLayoutMap, effectCells) {
+  const rects = [];
+  for (const l of nodeLayoutMap.values()) {
+    rects.push(
+      inflateRect(
+        { x: l.absX, y: l.absY, w: l.width, h: l.height + (l.node.__iconExtra || 0) },
+        6
+      )
+    );
+  }
+  for (const eff of effectCells) {
+    if (eff.absX == null || eff.absY == null) continue;
+    rects.push(inflateRect({ x: eff.absX, y: eff.absY, w: eff.width, h: eff.height }, 6));
+  }
+  return rects;
+}
+
+/** 実測ジオメトリ（check-layout.mjs）から、ラベルが避けるべき領域を作る。 */
+function measuredLabelObstacles(measured) {
+  const rects = [];
+  for (const n of measured.nodes) rects.push(inflateRect(n, 4));
+  // 障害物にするのは描画されるものだけ。measured.nodeTexts は塗り・枠線の無い
+  // text セルの枠（透明な余白）なので、そのまま障害物にすると過剰に避ける。
+  // アイコン下のキャプションなどノード枠から出た文字は vertexLabels 側で測れる。
+  for (const t of measured.vertexLabels) rects.push(inflateRect(t, 3));
+  for (const l of measured.lanes) {
+    rects.push(laneBorderObstacle(l.x, l.y, l.w, 2));
+    rects.push(laneBorderObstacle(l.x, l.y + l.h - 2, l.w, 2));
+    rects.push(laneBorderObstacle(l.x, l.y, 2, l.h));
+    rects.push(laneBorderObstacle(l.x + l.w - 2, l.y, 2, l.h));
+  }
+  for (const e of measured.edgePaths) {
+    for (let i = 1; i < e.pts.length; i++) {
+      const a = e.pts[i - 1];
+      const b = e.pts[i];
+      // 斜め線分を外接矩形のまま障害物にすると、線から遠い場所まで避けてしまう。
+      // 軸平行なら矩形が線そのものなのでそのまま、斜めなら小さな区間に割って近似する。
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+      const pieces =
+        dx > 24 && dy > 24 ? Math.min(12, Math.max(1, Math.ceil(Math.max(dx, dy) / 60))) : 1;
+      for (let k = 0; k < pieces; k++) {
+        const x0 = a.x + (b.x - a.x) * (k / pieces);
+        const y0 = a.y + (b.y - a.y) * (k / pieces);
+        const x1 = a.x + (b.x - a.x) * ((k + 1) / pieces);
+        const y1 = a.y + (b.y - a.y) * ((k + 1) / pieces);
+        rects.push({
+          x: Math.min(x0, x1) - 1.5,
+          y: Math.min(y0, y1) - 1.5,
+          w: Math.max(3, Math.abs(x1 - x0)) + 3,
+          h: Math.max(3, Math.abs(y1 - y0)) + 3,
+          weight: 4,
+        });
+      }
+    }
+  }
+  return rects;
+}
+
+/** レーン枠の線（幅 2px）を、周囲 mpx ごと避けたい障害物として返す。 */
+function laneBorderObstacle(x, y, w, h, m = 5) {
+  return { x: x - m, y: y - m, w: w + m * 2, h: h + m * 2, hard: true };
 }
 
 /**
  * Builds draw.io `<mxfile>` XML string in either `"horizontal"` or `"vertical"` swimlane direction.
  */
-export function generateWorkflowDrawioXml(spec, overrideDirection = null) {
+export function generateWorkflowDrawioXml(
+  spec,
+  overrideDirection = null,
+  placementState = null,
+  out = null,
+  measured = null
+) {
   const dir = (overrideDirection || spec.direction || "horizontal").toLowerCase();
   if (dir === "vertical" || dir === "v") {
-    return generateVerticalWorkflowXml(spec);
+    return generateVerticalWorkflowXml(spec, placementState, out, measured);
   }
-  return generateHorizontalWorkflowXml(spec);
+  return generateHorizontalWorkflowXml(spec, placementState, out, measured);
 }
 
 const HELP_TEXT = `
@@ -931,6 +1422,66 @@ Options:
       --theme <theme>            Color theme: light | dark (default: light)
   -h, --help                     Show help
 `.trim();
+
+/**
+ * XML を作っては内蔵レンダラーで実測し、重なったラベルだけ別候補に置き換えて作り直す。
+ * 置き場所の予測は実際の折れ線ルーティングと数pxずれるため、実測値をフィードバックする。
+ */
+export function buildWorkflowWithLabelCheck(spec, overrideDirection, maxRounds = 5) {
+  // 1 pass 目: 仮のラベルで描画し、実際の折れ線・ノード・レーン枠の位置を測る。
+  const probe = generateWorkflowDrawioXml(spec, overrideDirection);
+  let measured;
+  try {
+    measured = measureDiagram(probe, null);
+  } catch (err) {
+    return { xml: probe, problems: [], rounds: 1, inspectError: err };
+  }
+  measured.edgePathsById = new Map(measured.edgePaths.map((p) => [p.id, p.pts]));
+
+  // 2 pass 目以降: 実測ジオメトリを基準に置き場所を探す。当たったラベルだけ候補を
+  // 潰して作り直し、重なり合計が最少の図を採る（置き場所の予測は実測と一致する）。
+  const placementState = new Map();
+  let best = null;
+  const seen = new Set();
+
+  for (let round = 0; round < maxRounds; round++) {
+    const out = { placements: new Map() };
+    const xml = generateWorkflowDrawioXml(spec, overrideDirection, placementState, out, measured);
+    if (seen.has(xml)) break; // 同じ置き場所に戻った（打ち手を使い切った）
+    seen.add(xml);
+
+    let report;
+    try {
+      report = inspectDiagram(xml, null);
+    } catch (err) {
+      return { xml, problems: [], rounds: round + 2, inspectError: err };
+    }
+    const problems = report.problems.filter((p) => p.kind !== "ラベルサイズ未確定");
+    const total = problems.reduce((sum, p) => sum + p.area, 0);
+    if (best == null || total < best.total) {
+      best = { xml, problems, total, rounds: round + 2 };
+    }
+    if (total === 0) break;
+
+    const badLabels = new Set(problems.map((p) => p.labelId));
+    let advanced = false;
+    for (const [edgeId, placed] of out.placements) {
+      if (!badLabels.has(`${edgeId}_lbl`)) continue;
+      let st = placementState.get(edgeId);
+      if (!st) {
+        st = { tried: new Set(), bias: { byKey: new Map(), fallback: null } };
+        placementState.set(edgeId, st);
+      }
+      if (!st.tried.has(placed.key)) {
+        st.tried.add(placed.key);
+        advanced = true;
+      }
+    }
+    if (!advanced) break;
+  }
+
+  return best || { xml: probe, problems: [], rounds: 1 };
+}
 
 async function main() {
   const { values, positionals } = parseArgs({
@@ -955,7 +1506,7 @@ async function main() {
 
   const rawJson = await fs.readFile(specPath, "utf8");
   const spec = JSON.parse(rawJson);
-  const xml = generateWorkflowDrawioXml(spec, values.direction);
+  const { xml, problems, rounds } = buildWorkflowWithLabelCheck(spec, values.direction);
 
   const outPath =
     values.output ||
@@ -970,6 +1521,17 @@ async function main() {
   await fs.mkdir(path.dirname(path.resolve(outPath)), { recursive: true });
   await fs.mkdir(path.dirname(path.resolve(xmlOutPath)), { recursive: true });
   await fs.writeFile(xmlOutPath, xml, "utf8");
+
+  if (problems.length > 0) {
+    console.log(
+      `レイアウト検査: 重なり ${problems.length} 件が残っています（rounds=${rounds}。edge の labelPosition / labelWidth、colPitch で微調できます）`
+    );
+    for (const p of problems.slice(0, 6)) {
+      console.log(`  - [${p.kind}] "${p.label}" × ${p.other}`);
+    }
+  } else {
+    console.log(`レイアウト検査: 文字と線・ノード・レーン枠の重なりなし（rounds=${rounds}）`);
+  }
 
   const scale = parseFloat(values.scale) || 2;
   const border = parseInt(values.border, 10) || 16;

@@ -91,25 +91,43 @@
         <mxCell id="st_sqs_effect" value="&lt;b&gt;SQS キュー動作&lt;/b&gt;&lt;br&gt;• SendMessage: OrderConfirmedEvent&lt;br&gt;• Receive/Delete: NotifyWorkerが消費" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=12;fillColor=#ffffc0;strokeColor=#b59b00;fontSize=11;align=left;spacingLeft=6;shadow=1;" vertex="1" parent="lane_storage">
           <mxGeometry x="975" y="136" width="200" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="edge_1" value="① 押下" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="u_click" target="s_checkout">
+        <mxCell id="edge_1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="u_click" target="s_checkout">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_2" value="② HTTPS POST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="s_checkout" target="b_apigw">
+        <mxCell id="edge_1_lbl" value="① 押下" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_1">
+          <mxGeometry x="0.58" y="0" relative="1" as="geometry" width="40" height="21"><mxPoint x="10" y="-11" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="s_checkout" target="b_apigw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_3" value="③ 認証OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_apigw" target="b_validate">
+        <mxCell id="edge_2_lbl" value="② HTTPS POST" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_2">
+          <mxGeometry x="-0.1" y="0" relative="1" as="geometry" width="83" height="36"><mxPoint x="-42" y="-42" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_apigw" target="b_validate">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_4" value="④ Get/Lock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;endFill=0;strokeWidth=1.8;strokeColor=#0066CC;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_validate" target="st_dynamo">
+        <mxCell id="edge_3_lbl" value="③ 認証OK" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_3">
+          <mxGeometry x="-0.1" y="0" relative="1" as="geometry" width="49" height="21"><mxPoint x="10" y="-11" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;endFill=0;strokeWidth=1.8;strokeColor=#0066CC;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_validate" target="st_dynamo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_5" value="⑤ 検証OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_validate" target="b_order_lambda">
+        <mxCell id="edge_4_lbl" value="④ Get/Lock" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_4">
+          <mxGeometry x="0.8" y="0" relative="1" as="geometry" width="63" height="21"><mxPoint x="34" y="-11" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_validate" target="b_order_lambda">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_6" value="⑥ TX COMMIT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_order_lambda" target="st_rds">
+        <mxCell id="edge_5_lbl" value="⑤ 検証OK" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_5">
+          <mxGeometry x="0.58" y="0" relative="1" as="geometry" width="49" height="21"><mxPoint x="-25" y="-28" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0.5;exitY=1;exitDx=0;exitDy=38;exitPerimeter=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="b_order_lambda" target="st_rds">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_7" value="⑦ PutObject" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_s3">
+        <mxCell id="edge_6_lbl" value="⑥ TX COMMIT" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_6">
+          <mxGeometry x="-0.1" y="0" relative="1" as="geometry" width="76" height="36"><mxPoint x="10" y="-18" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2.2;strokeColor=#b85450;exitX=0;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_s3">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="755" y="594" />
@@ -117,7 +135,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge_8" value="⑧ Enqueue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_sqs">
+        <mxCell id="edge_7_lbl" value="⑦ PutObject" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_7">
+          <mxGeometry x="-0.34" y="0" relative="1" as="geometry" width="69" height="21"><mxPoint x="10" y="-11" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="st_sqs">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="975" y="579" />
@@ -125,14 +146,26 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge_9" value="⑨ Poll" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=0.5;exitY=0;entryX=0.5;entryY=1;entryDx=0;entryDy=38;entryPerimeter=0;" edge="1" parent="1" source="st_sqs" target="b_notify_worker">
+        <mxCell id="edge_8_lbl" value="⑧ Enqueue" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_8">
+          <mxGeometry x="0.58" y="0" relative="1" as="geometry" width="56" height="21"><mxPoint x="-28" y="6" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;dashPattern=6 4;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d79b00;exitX=0.5;exitY=0;entryX=0.5;entryY=1;entryDx=0;entryDy=38;entryPerimeter=0;" edge="1" parent="1" source="st_sqs" target="b_notify_worker">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_10" value="⑩ 200 OK (order_id)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;strokeWidth=1.5;strokeColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="s_complete">
+        <mxCell id="edge_9_lbl" value="⑨ Poll" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_9">
+          <mxGeometry x="-0.1" y="0" relative="1" as="geometry" width="40" height="21"><mxPoint x="10" y="-11" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;dashed=1;html=1;endArrow=open;strokeWidth=1.5;strokeColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="b_order_lambda" target="s_complete">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_11" value="⑪ 画面表示" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="s_complete" target="u_confirm">
+        <mxCell id="edge_10_lbl" value="⑩ 200 OK (order_id)" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_10">
+          <mxGeometry x="0.58" y="0" relative="1" as="geometry" width="121" height="21"><mxPoint x="-61" y="-28" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="edge_11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="s_complete" target="u_confirm">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_11_lbl" value="⑪ 画面表示" style="edgeLabel;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontSize=11;" vertex="1" connectable="0" parent="edge_11">
+          <mxGeometry x="0.58" y="0" relative="1" as="geometry" width="56" height="36"><mxPoint x="48" y="-18" as="offset" /></mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>

@@ -72,7 +72,20 @@ node "$SKILL/scripts/drawio2png.mjs" \
   /path/to/diagram.drawio \
   -o /path/to/diagram.drawio.png \
   --scale 2 --border 16 --embed-xml
+
+# 編集した図の文字と線の重なりを機械検査（終了コード 0 が正常）
+node "$SKILL/scripts/check-layout.mjs" /path/to/diagram.drawio
 ```
+
+---
+
+## 日本語ラベルの安全な出し方（`build-workflow.mjs` が守る規約）
+
+日本語の長いラベルは、置き方を工夫しないと線や他の図形の上を横切って「線が消えて見える」原因になる。スキルの生成側は次を自動で行うため、XML を直接書くときも同じ規約に従う。
+
+1. **エッジラベルはエッジの `value` に書かない**。`<mxCell id="e1_lbl" style="edgeLabel;..." vertex="1" connectable="0" parent="e1">` の子セルとして出し、`<mxGeometry>` に **折返し幅の `width`/`height`** を必ず持たせる。幅を持たないラベルは折り返し幅が未確定のまま1本の長文になり、他のレーンまで横切る。
+2. **ラベルの位置は「線上の点 + オフセット」で決める**。draw.io は `relative` な `x`（-1〜1 → 線分上の位置）で求めた点上に、`<mxPoint as="offset">` を **ラベル箱の左上**として置く。中心基準で置きたい場合は `offset = 中心基準のずれ - 箱の半分` に読み替える。
+3. **レーンの見出しを `swimlane` 本体の `value` に置かない**。`horizontal=0` のレーンでは日本語が 90° 回転して縦読みに見えるため、`value=""` にして `text;html=1;` の子セルで横書きする（詳細は [references/swimlane-xml-guide.md](references/swimlane-xml-guide.md)）。
 
 ---
 
@@ -107,6 +120,15 @@ node "$SKILL/scripts/drawio2png.mjs" \
    - JSON スキーマの詳細は [references/workflow-schema.md](references/workflow-schema.md) を参照。
    - 手書き・カスタム XML で調整する場合は [references/swimlane-xml-guide.md](references/swimlane-xml-guide.md) を参照。
    - 完全なサンプルは [examples/order-checkout-workflow.json](examples/order-checkout-workflow.json) を参照。
-4. **`.drawio` + `.drawio.png` のビルドと視覚検証**
+4. **`.drawio` + `.drawio.png` のビルド**
    - `build-workflow.mjs`（または `drawio2png.mjs`）を実行して `.drawio.png` を生成する。
-   - 生成された `.drawio.png` を画像として読み込み（`read_file`）、ラベル切れや矢印の重なりがないか目視確認してからユーザーに提示する。
+   - `build-workflow.mjs` は生成後に図を実測し、文字が線・ノード・レーン枠と重なっていないか自己検査して結果を表示する（`レイアウト検査: ...`）。
+5. **機械検査 → 目視検証の順で仕上げる（必須）**
+   - 機械検査:
+
+     ```bash
+     node "$SKILL/scripts/check-layout.mjs" /path/to/workflow.drawio
+     ```
+
+     終了コード 0 なら「文字は線・ノード・レーン枠と交差していない」。1 のときは指摘されたエッジの `labelWidth` / `labelPosition` / `labelRatio`、または `colPitch` を調整して作り直す。
+   - 目視検証: 生成された `.drawio.png` を画像として読み込み（`read_file`）、ラベル切れ・線と文字の重なり・枠からはみ出したノートがないか確認してからユーザーに提示する。機械検査を通っても、ラベルが密集して読みにくい場合はステップ間隔を広げて作り直す。
