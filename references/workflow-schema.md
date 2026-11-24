@@ -130,3 +130,19 @@
 | `read` | 青（`#0066CC`）の破線 + オープン矢印 | DBからの `SELECT`、DynamoDB `GetItem`、S3 `GetObject` |
 | `async` | オレンジ（`#d79b00`）の破線 + 標準矢印 | SQS `SendMessage` / `Poll`、SNS Publish、非同期ジョブ起動 |
 | `response` | グレー（`#666666`）の細破線 + オープン矢印 | APIレスポンス返却（`200 OK` 等） |
+
+### ラベルの折返しと位置（長い日本語ラベル用）
+
+デフォルトではラベルの折返し幅と位置を自動計算する。線や図形に当たる場合は以下で上書きできる。
+
+| フィールド | 型 | 既定 | 説明 |
+|---|---|---|---|
+| `labelWidth` | `number` | 自動（84〜168px） | ラベル箱の折返し幅px。語の途中で折り返したくない語があるときは広めにする |
+| `labelPosition` | `"auto" \| "center" \| "left" \| "right"` | `"auto"` | 線の進行方向に対して左側／右側に寄せる。`center` は線の上に白い背景で重なる（最終手段） |
+| `labelRatio` | `number`（-1〜1） | 自動 | 線上の基準点。`-1` が始点、`0` が中央、`1` が終点 |
+
+```json
+{ "from": "st_sqs", "to": "st_notify", "type": "async", "label": "⑨ Poll: OrderConfirmedEvent", "labelWidth": 132, "labelPosition": "left", "labelRatio": -0.34 }
+```
+
+`node scripts/check-layout.mjs <図面>` を実行すると、実際に描画されるラベル枠を測って「線と文字」「文字とノード」「文字とレーン枠」の重なりを指摘する（終了コード 0 が正常）。`build-workflow.mjs` も生成後に同じ検査を自動で行う。
